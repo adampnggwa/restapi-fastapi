@@ -118,6 +118,38 @@ async def copy_file_to_drive(name: str, url: str):
 
     except HttpError as error:
         return JSONResponse(content={"message": f"An error occurred: {str(error)}"}, status_code=500)
+    
+@app.post("/find_or_create_file/")
+async def find_or_create_file(name: str):
+    """Mencari atau membuat file di Google Drive dengan nama tertentu"""
+
+    try:
+        # Buat service Drive menggunakan credentials yang sudah di-load
+        drive_service = create_drive_service()
+
+        # Definisikan parameter untuk mencari file dengan nama tertentu
+        query = f"name='{name}' and mimeType!='application/vnd.google-apps.folder' and trashed=false"
+        fields = "nextPageToken, files(id, name, mimeType)"
+
+        # Cari file dengan nama tertentu di Google Drive
+        results = drive_service.files().list(q=query, fields=fields).execute()
+        items = results.get("files", [])
+
+        # Jika file dengan nama tertentu sudah ada, kembalikan ID file tersebut
+        if items:
+            file = items[0]
+            return JSONResponse(content={"message": f"File '{name}' telah ditemukan dengan ID: {file.get('id')}"})
+
+        # Jika file dengan nama tertentu belum ada, buat file baru
+        file_metadata = {
+            "name": name
+        }
+        file = drive_service.files().create(body=file_metadata, fields="id").execute()
+
+        return JSONResponse(content={"message": f"File '{name}' telah dibuat dengan ID: {file.get('id')}"})
+
+    except HttpError as error:
+        return JSONResponse(content={"message": f"An error occurred: {str(error)}"}, status_code=500)
 
 # checking server error
 @app.exception_handler(Exception)

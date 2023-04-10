@@ -9,7 +9,6 @@ from googleapiclient.http import MediaIoBaseUpload
 import requests
 from io import BytesIO
 
-
 app = FastAPI()
 
 # Konfigurasi kredensial Oauth
@@ -39,6 +38,7 @@ def create_drive_service():
     drive_service = build('drive', 'v3', credentials=credentials)
     return drive_service
 
+# membuat folder di google drive
 @app.post("/create_folder/")
 async def create_folder(name: str):
     """Membuat folder baru di Google Drive"""
@@ -59,6 +59,7 @@ async def create_folder(name: str):
 
     return JSONResponse(content={"message": f"Folder '{name}' telah dibuat dengan ID: {folder.get('id')}"})
 
+# mencari atau membuat folder dengan nama tertentu v2
 @app.post("/find_or_create_folder/")
 async def find_or_create_folder(name: str):
     """Mencari atau membuat folder di Google Drive dengan nama tertentu"""
@@ -92,6 +93,7 @@ async def find_or_create_folder(name: str):
     except HttpError as error:
         return JSONResponse(content={"message": f"An error occurred: {str(error)}"}, status_code=500)
     
+# menyalin file dari layanan lain ke google drive    
 @app.post("/copy_file_to_drive/")
 async def copy_file_to_drive(name: str, url: str):
     """Menyalin file dari layanan lain ke Google Drive"""
@@ -117,8 +119,9 @@ async def copy_file_to_drive(name: str, url: str):
         return JSONResponse(content={"message": f"File '{name}' telah disalin ke Google Drive dengan ID: {file.get('id')}"})
 
     except HttpError as error:
-        return JSONResponse(content={"message": f"An error occurred: {str(error)}"}, status_code=500)
+        return JSONResponse(content={"message": f"An error occurred: {str(error)}"}, status_code=500)#
     
+# mencari atau membuat file dengan nama tertentu v2    
 @app.post("/find_or_create_file/")
 async def find_or_create_file(name: str):
     """Mencari atau membuat file di Google Drive dengan nama tertentu"""
@@ -147,6 +150,32 @@ async def find_or_create_file(name: str):
         file = drive_service.files().create(body=file_metadata, fields="id").execute()
 
         return JSONResponse(content={"message": f"File '{name}' telah dibuat dengan ID: {file.get('id')}"})
+
+    except HttpError as error:
+        return JSONResponse(content={"message": f"An error occurred: {str(error)}"}, status_code=500)
+
+# membuat pintasan file di google drive  
+@app.post("/create_shortcut/")
+async def create_shortcut(name: str, target_file_id: str):
+    """Membuat pintasan (shortcut) ke file tertentu di Google Drive"""
+
+    try:
+        # Buat service Drive menggunakan credentials yang sudah di-load
+        drive_service = create_drive_service()
+
+        # Buat metadata untuk pintasan file
+        shortcut_metadata = {
+            "name": name,
+            "mimeType": "application/vnd.google-apps.shortcut",
+            "shortcutDetails": {
+                "targetId": target_file_id
+            }
+        }
+
+        # Buat pintasan file di Google Drive
+        shortcut = drive_service.files().create(body=shortcut_metadata, fields="id").execute()
+
+        return JSONResponse(content={"message": f"Pintasan '{name}' telah dibuat dengan ID: {shortcut.get('id')}"})
 
     except HttpError as error:
         return JSONResponse(content={"message": f"An error occurred: {str(error)}"}, status_code=500)
